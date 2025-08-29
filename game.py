@@ -5,14 +5,14 @@ import sys
 import os
 import time
 import noise
-
+import random
 
 ##settings
 
 FPS = 60
 RES = WIDTH, HEIGHT = 800, 600
 CAPTION = "OverDrive"
-PL_POS = [int(WIDTH/2),int(HEIGHT/2)]
+#PL_POS = [int(WIDTH/2),int(HEIGHT/2)]
 PL_SPD = 3
 PL_ACC_Y = 2 
 START_TIME = time.time()
@@ -21,7 +21,6 @@ CHUNK_SIZE = 8
 
 running = False
 true_scroll = [0, 0]
-movement = [0, 0]
 game_map = {}
 
 ##some things
@@ -34,8 +33,8 @@ screen = pygame.display.set_mode(RES)
 clock = pygame.time.Clock()
 active_rect = pygame.Rect(0, 0, WIDTH, HEIGHT)
 
-player_img = img_conv(os.path.join("assets","man.png"))
-player_rect = player_img.get_rect()
+player_img = img_conv(os.path.join("assets","player.png"))
+player_rect = pygame.Rect(WIDTH/2, -100, player_img.width, player_img.height)
 
 grass_img = img_conv(os.path.join("assets", "grass_block.png"))
 dirt_img = img_conv(os.path.join("assets", "dirt.png"))
@@ -57,23 +56,24 @@ pygame.mouse.set_cursor(*pygame.cursors.tri_left)
 
 
 def main():
-    global START_TIME, movement
+    global START_TIME, player_rect, Y_MOMENTUM
 
     while running:
        
+        screen.fill("lightblue")
         dt = time.time() - START_TIME
         dt *= FPS
         START_TIME = time.time()
 
-        true_scroll[0] += (player_rect.x - true_scroll[0] - (int(WIDTH/4)+int(player_rect.width/2)) )/20
-        true_scroll[1] += (player_rect.y - true_scroll[1] - (int(HEIGHT/4)+int(player_rect.height/2)) )/20
+        true_scroll[0] += (player_rect.x - true_scroll[0] - (int(WIDTH/2)+int(player_rect.width/2)) + 10)/20
+        true_scroll[1] += (player_rect.y - true_scroll[1] - (int(HEIGHT/2)+int(player_rect.height/2)) + 10)/20
         
         scroll = true_scroll.copy()
         scroll[0], scroll[1] = int(scroll[0]), int(scroll[1])
 
         tile_rects = []
-        for y in range(4):
-            for x in range(5):
+        for y in range(7):
+            for x in range(8):
                 target_x = x - 1 + int(round(scroll[0]/(CHUNK_SIZE*16)))
                 target_y = y - 1 + int(round(scroll[1]/(CHUNK_SIZE*16)))
 
@@ -85,9 +85,9 @@ def main():
                     screen.blit(tile_index[tile[1]], (tile[0][0]*16-scroll[0], tile[0][1]*16-scroll[1]))
                     if tile[1] in [1,2]:
                         tile_rects.append(pygame.Rect(tile[0][0]*16, tile[0][1]*16, 16, 16))
-        
+                           
 
-        screen.fill("lightblue")
+
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
@@ -95,59 +95,34 @@ def main():
             if event.type == pygame.QUIT:
                 terminate()
         
+        movement = [0, 0]
         ##Player moevment
         keys = pygame.key.get_pressed()
         if keys[pygame.K_w] or keys[pygame.K_UP]:
-            movement[1] -= PL_SPD*dt
+            movement[1] -= int(PL_SPD*dt)
         if keys[pygame.K_s] or keys[pygame.K_DOWN]:
-            movement[1] += PL_SPD*dt
+            movement[1] += int(PL_SPD*dt)
 
         if keys[pygame.K_a] or keys[pygame.K_LEFT]:
-            movement[0] -= PL_SPD*dt
+            movement[0] -= int(PL_SPD*dt)
         if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
-            movement[0] += PL_SPD*dt
+            movement[0] += int(PL_SPD*dt)
         
         if keys[pygame.K_SPACE]:
-            movement[1] -= PL_SPD*dt
-
+            pass
         pygame.draw.rect(screen, "magenta", active_rect, width =2)
-        #player_draw(player_img, player_rect, PL_POS, active_rect, scroll)
-        movement[1] = gravity(Y_MOMENTUM, PL_POS[1], PL_ACC_Y)
-
-        screen.blit(player_img, (0-scroll[0],0-scroll[1]))
+        player_draw(player_img, player_rect, active_rect, scroll)
+        
+        pygame.display.set_caption(f"({player_rect.x}, {player_rect.y})")
+        #movement[1] += gravity(player_rect.y, PL_ACC_Y)
+        player_rect = move(player_rect, tile_rects, movement)
+        #screen.blit(pygame.transform.scale(display, RES), (0,0))
+        screen.blit(player_img, (0-scroll[0],0-scroll[1]))   #An object not a player
         pygame.display.flip()
         clock.tick(FPS)
 
 
-def player_draw(PLAYER_IMG, PLAYER_RECT, PLAYER_POS, ACTIVE_RECT, SCROLL):
-    PLAYER_RECT.center = PLAYER_POS[0], PLAYER_POS[1]
-    
-    #Boundry collision system
-#    if PLAYER_RECT.x + PLAYER_RECT.width > ACTIVE_RECT.width:
-#        PLAYER_RECT.x =  ACTIVE_RECT.width - PLAYER_RECT.width 
-
-#    if PLAYER_RECT.y + PLAYER_RECT.height > ACTIVE_RECT.height:
-#        PLAYER_RECT.y = ACTIVE_RECT.height - PLAYER_RECT.height
-
-#    if PLAYER_RECT.x < ACTIVE_RECT.x:
-#        PLAYER_RECT.x = ACTIVE_RECT.x
-
-#    if PLAYER_RECT.y < ACTIVE_RECT.y:
-#        PLAYER_RECT.y = ACTIVE_RECT.y
-
-    ##Helps to keep Player_pos and Player_rect' position same
-#    if PLAYER_POS[0] + (PLAYER_RECT.width/2) > ACTIVE_RECT.width:
-#        PLAYER_POS[0] = ACTIVE_RECT.width - PLAYER_RECT.width/2
-    if PLAYER_POS[1] + (PLAYER_RECT.height/2) > ACTIVE_RECT.height:
-        PLAYER_POS[1] = ACTIVE_RECT.height - PLAYER_RECT.height/2
-
-#    if PLAYER_POS[0] - (PLAYER_RECT.width/2) < ACTIVE_RECT.x:
-#        PLAYER_POS[0] = ACTIVE_RECT.x + PLAYER_RECT.width/2
-    if PLAYER_POS[1] - (PLAYER_RECT.height/2) < ACTIVE_RECT.y:
-        PLAYER_POS[1] = ACTIVE_RECT.y + PLAYER_RECT.height/2
-
-
-    
+def player_draw(PLAYER_IMG, PLAYER_RECT, ACTIVE_RECT, SCROLL):
     screen.blit(PLAYER_IMG, (player_rect.x - SCROLL[0], player_rect.y - SCROLL[1]))
 
 def collisions(player_rect, tile_list):
@@ -155,35 +130,33 @@ def collisions(player_rect, tile_list):
     for tile in tile_list:
         if player_rect.colliderect(tile):
             hit_list.append(tile)
-    return hit_list
-    
+    return hit_list    
 
 def move(player_rect, tile_list, player_movement):
 
-    player_rect.x += movement[0]
-    hit_list = collisions(player_rect, tile_rect)
+    player_rect.x += player_movement[0]
+    hit_list = collisions(player_rect, tile_list)
     for tile in hit_list:
-        if movement[0] > 0:
+        if player_movement[0] > 0:
             player_rect.right = tile.left
 
-        elif movement[0] < 0:
+        elif player_movement[0] < 0:
             player_rect.left = tile.right
 
 
-    player_rect.y += movemnt[1]
-    hit_list = collisions(player_rect, tile_rect)
+    player_rect.y += player_movement[1]
+    hit_list = collisions(player_rect, tile_list)
     for tile in hit_list:
-        if movement[1] > 0:
+        if player_movement[1] > 0:
             player_rect.bottom = tile.top
 
-        if movement[1] < 0:
+        if player_movement[1] < 0:
             player_rect.top = tile.bottom
 
     return player_rect
 
-def gravity(y_momentum, player_pos_y, player_acc_y ):
-    y_momentum += player_acc_y
-    player_pos_y += y_momentum
+def gravity(player_pos_y, player_acc_y ):
+    player_pos_y += player_acc_y
     return player_pos_y
 
 def generate_chunk(x, y):
@@ -196,14 +169,24 @@ def generate_chunk(x, y):
 
             tile_type = 0
 
-            height = int(noise.pnoise1(target_x * 0.1, repeat=999999999) * 6) # change the * 6 to a higher or lower number to increase or reduce the terrain height
+            height = int(noise.pnoise1(target_x * 0.1, repeat=999999999) * 7) # change the * 6 to a higher or lower number to increase or reduce the terrain height
             if target_y > 8 - height:
                 tile_type = 2
                 chunk_data.append([[target_x, target_y], tile_type])
             elif target_y == 8 - height:
                 tile_type = 1
                 chunk_data.append([[target_x, target_y], tile_type])
-
+            """
+            if target_y > 10:
+                tile_type = 2 # dirt
+            elif target_y == 10:
+                tile_type = 1 # grass
+            elif target_y == 9:
+                if random.randint(1,5) == 1:
+                    tile_type = 3 # plant
+            if tile_type != 0:
+                chunk_data.append([[target_x,target_y],tile_type])
+            """
     return chunk_data
 
 def terminate():
