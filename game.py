@@ -16,7 +16,8 @@ CAPTION = "OverDrive"
 PL_SPD = 3
 PL_ACC_Y = 2 
 START_TIME = time.time()
-Y_MOMENTUM = 0
+MOMENTUM = 0
+MOMEN = 4
 CHUNK_SIZE = 8
 
 running = False
@@ -34,16 +35,22 @@ clock = pygame.time.Clock()
 active_rect = pygame.Rect(0, 0, WIDTH, HEIGHT)
 
 player_img = img_conv(os.path.join("assets","player.png"))
+player_img = pygame.transform.scale(player_img, (player_img.get_width()*2, player_img.get_height()*2))
 player_rect = pygame.Rect(WIDTH/2, -100, player_img.width, player_img.height)
+
 
 grass_img = img_conv(os.path.join("assets", "grass_block.png"))
 dirt_img = img_conv(os.path.join("assets", "dirt.png"))
 plant_img = img_conv(os.path.join("assets", "plant.png"))
+spike_img = img_conv(os.path.join("assets", "spike.png"))
+big_spike_img = img_conv(os.path.join("assets", "big_spike.png"))
 
 tile_index = {
     1:grass_img,
     2:dirt_img,
-    3:plant_img
+    3:plant_img,
+    4:spike_img,
+    5:big_spike_img
                 }
 
 
@@ -56,17 +63,17 @@ pygame.mouse.set_cursor(*pygame.cursors.tri_left)
 
 
 def main():
-    global START_TIME, player_rect, Y_MOMENTUM
+    global START_TIME, player_rect , MOMENTUM
 
     while running:
        
-        screen.fill("lightblue")
+        screen.fill("burlywood4")
         dt = time.time() - START_TIME
         dt *= FPS
         START_TIME = time.time()
 
-        true_scroll[0] += (player_rect.x - true_scroll[0] - (int(WIDTH/2)+int(player_rect.width/2)) + 10)/20
-        true_scroll[1] += (player_rect.y - true_scroll[1] - (int(HEIGHT/2)+int(player_rect.height/2)) + 10)/20
+        true_scroll[0] += (player_rect.x - true_scroll[0] - (int(WIDTH/2)+int(player_rect.width/2)) + 40)/20
+        true_scroll[1] += (player_rect.y - true_scroll[1] - (int(HEIGHT/2)+int(player_rect.height/2)) + 20)/20
         
         scroll = true_scroll.copy()
         scroll[0], scroll[1] = int(scroll[0]), int(scroll[1])
@@ -107,9 +114,18 @@ def main():
             movement[0] -= int(PL_SPD*dt)
         if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
             movement[0] += int(PL_SPD*dt)
-        
+       
+        if keys[pygame.K_l]:
+            movement[0] += int(4*dt)
+
         if keys[pygame.K_SPACE]:
-            pass
+            MOMENTUM = 10
+
+        if MOMENTUM > -5:
+            MOMENTUM -= 3*dt/6
+
+        movement[1] -= MOMENTUM - MOMEN*(dt/6)
+
         pygame.draw.rect(screen, "magenta", active_rect, width =2)
         player_draw(player_img, player_rect, active_rect, scroll)
         
@@ -169,24 +185,30 @@ def generate_chunk(x, y):
 
             tile_type = 0
 
-            height = int(noise.pnoise1(target_x * 0.1, repeat=999999999) * 7) # change the * 6 to a higher or lower number to increase or reduce the terrain height
-            if target_y > 8 - height:
+            height = int(noise.pnoise1(target_x * 0.1, repeat=999999999) * 11) # change the * 6 to a higher or lower number to increase or reduce the terrain height
+            if target_y > 15 - height:
                 tile_type = 2
-                chunk_data.append([[target_x, target_y], tile_type])
-            elif target_y == 8 - height:
+            elif target_y == 15 - height:
                 tile_type = 1
-                chunk_data.append([[target_x, target_y], tile_type])
-            """
-            if target_y > 10:
-                tile_type = 2 # dirt
-            elif target_y == 10:
-                tile_type = 1 # grass
-            elif target_y == 9:
+            elif target_y == 14 - height:
                 if random.randint(1,5) == 1:
-                    tile_type = 3 # plant
+                    tile_type = 3
+            
+            depth = int(noise.pnoise1(target_x * 0.2, repeat=999999999) * 8)
+            if target_y < -10 - depth:
+                tile_type = 2
+            elif target_y == -10 - depth:
+                tile_type = 1
+            elif target_y == -9 - depth:
+                if random.randint(1,5) == 1:
+                    tile_type = 4
+                if random.randint(1,7) == 1:
+                    tile_type = 5
+            
             if tile_type != 0:
-                chunk_data.append([[target_x,target_y],tile_type])
-            """
+                chunk_data.append([[target_x, target_y], tile_type])
+
+
     return chunk_data
 
 def terminate():
