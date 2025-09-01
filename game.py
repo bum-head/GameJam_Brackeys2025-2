@@ -47,7 +47,7 @@ transbar = pygame.transform.scale(transbar, SCALE_SIZE)
 
 player_img = img_conv(os.path.join("assets","player.png"))
 player_img = pygame.transform.scale(player_img, (player_img.get_width()*2, player_img.get_height()*2))
-player_rect = pygame.Rect(WIDTH/2, -110, player_img.get_width(), player_img.get_height())
+player_rect = pygame.Rect(WIDTH/2, -110, player_img.width, player_img.height)
 
 start_srn_img = img_conv(os.path.join("assets", "start_screen.png"))
 background_img = img_conv(os.path.join("assets", "background.png"))
