@@ -1,0 +1,9 @@
+# python environment
+.venv/
+
+# build dir
+build/
+dist/
+
+# python bytecode
+__pycache__/
